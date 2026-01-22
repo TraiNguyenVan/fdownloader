@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  fdownloader:
+    build: .
+    image: fdownloader
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+    # We will change the command/entrypoint to run the web server
+    command: python app.py

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Batch Downloader</title>
+    <style>
+        :root {
+            --primary: #1877f2;
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --text: #050505;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+        }
+        .input-group {
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 4px;
+            display: flex;
+            margin-bottom: 1rem;
+        }
+        input {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            outline: none;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            min-height: 24px;
+        }
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .result-box {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #e7f3ff;
+            border-radius: 6px;
+        }
+        .btn-download {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .tip {
+            font-size: 0.8rem;
+            color: #65676b;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>FB Batch Downloader</h1>
+    <p style="margin-bottom: 20px; color: #666;">Paste a Facebook Theater Link to download all images.</p>
+    
+    <div class="input-group">
+        <input type="text" id="urlInput" placeholder="https://www.facebook.com/photo/?fbid=..." />
+        <button id="downloadBtn" onclick="startDownload()">Download</button>
+    </div>
+    
+    <div id="status"></div>
+    
+    <div id="resultBox" class="result-box">
+        <p>Found <span id="imgCount">0</span> images!</p>
+        <a href="#" id="downloadLink" class="btn-download">Download .ZIP</a>
+    </div>
+
+    <div class="tip">
+        Uses server-side cookies. 
+        <br>Click result link to download ZIP.
+    </div>
+</div>
+
+<script>
+    async function startDownload() {
+        const url = document.getElementById('urlInput').value.trim();
+        const btn = document.getElementById('downloadBtn');
+        const status = document.getElementById('status');
+        const resultBox = document.getElementById('resultBox');
+        
+        if (!url) {
+            status.innerHTML = '<span class="error">Please enter a URL</span>';
+            return;
+        }
+        
+        // Reset UI
+        status.innerHTML = '';
+        resultBox.style.display = 'none';
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner"></div> Processing...';
+        
+        try {
+            const response = await fetch('/api/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                status.innerHTML = '<span class="success">Completed!</span>';
+                document.getElementById('imgCount').innerText = data.count;
+                document.getElementById('downloadLink').href = data.download_url;
+                resultBox.style.display = 'block';
+            } else {
+                status.innerHTML = `<span class="error">Error: ${data.error}</span>`;
+            }
+        } catch (e) {
+            status.innerHTML = `<span class="error">Request failed: ${e.message}</span>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Download';
+        }
+    }
+</script>
+
+</body>
+</html>
