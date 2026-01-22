@@ -12,4 +12,6 @@ RUN playwright install firefox
 
 COPY . .
 
-ENTRYPOINT ["python", "main.py"]
+# ENTRYPOINT ["python", "main.py"]
+# Commented out to allow flexible commands from docker-compose
+

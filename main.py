@@ -49,7 +49,12 @@ def download_image(url, filename, cookies=None):
         print(f"Error downloading {url}: {e}")
         return False
 
-def main(post_url):
+def download_post(post_url, output_dir=None):
+    if output_dir is None:
+        output_dir = DOWNLOAD_DIR
+        
+    result = {"count": 0, "status": "failed", "error": None}
+    
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=True)
         # Use a larger viewport to ensure images are loaded/visible
@@ -67,15 +72,18 @@ def main(post_url):
             time.sleep(5) # Allow meaningful render
         except Exception as e:
             print(f"Navigation warning: {e}")
+            result["error"] = str(e)
 
-        if not os.path.exists(DOWNLOAD_DIR):
-            os.makedirs(DOWNLOAD_DIR)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         
         # Check login
         if "log in" in page.title().lower():
              print("Detected Login Wall! Cookies might be invalid.")
-             page.screenshot(path=os.path.join(DOWNLOAD_DIR, "debug_login_wall.png"))
-             return
+             page.screenshot(path=os.path.join(output_dir, "debug_login_wall.png"))
+             result["status"] = "login_required"
+             result["error"] = "Login wall detected. Check cookies."
+             return result
 
         # Attempt to find the post content
         # Strategy: Look for "Photo" style attachments.
@@ -149,9 +157,10 @@ def main(post_url):
         
         if not clicked:
             print("Failed to enter theater mode.")
-            page.screenshot(path=os.path.join(DOWNLOAD_DIR, "debug_failed_click.png"))
+            page.screenshot(path=os.path.join(output_dir, "debug_failed_click.png"))
             browser.close()
-            return
+            result["status"] = "failed_click"
+            return result
 
         # --- In Theater Mode ---
         print("Entered Theater Mode. Starting download loop.")
@@ -214,7 +223,7 @@ def main(post_url):
                 if src and src not in seen_urls:
                     seen_urls.add(src)
                     count += 1
-                    filename = os.path.join(DOWNLOAD_DIR, f"image_{count:03d}.jpg")
+                    filename = os.path.join(output_dir, f"image_{count:03d}.jpg")
                     print(f"Downloading {count}: {src[:40]}...")
                     download_image(src, filename)
                     consecutive_errors = 0
@@ -238,7 +247,7 @@ def main(post_url):
                 for sel in next_selectors:
                     btn = dialog.locator(sel)
                     if btn.count() > 0 and btn.first.is_visible():
-                        print(f"Clicking next: {sel}")
+                        # print(f"Clicking next: {sel}") # verbose
                         btn.first.click()
                         clicked_next = True
                         time.sleep(2)
@@ -265,12 +274,17 @@ def main(post_url):
 
         print(f"Total downloaded: {count}")
         browser.close()
+        
+        result["count"] = count
+        result["status"] = "success" if count > 0 else "no_images"
+        return result
+
+def main(url):
+    download_post(url)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python main.py <facebook_post_url>")
-        # Default for testing if no arg provided
         sys.exit(1)
-        
     url = sys.argv[1]
     main(url)

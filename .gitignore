@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+
+# Local Downloads
+downloads/
+
+# Sensitive Data (Cookies)
+cookies.txt
+facebook_cookies.json
+*.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
